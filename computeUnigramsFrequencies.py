@@ -19,12 +19,13 @@
 
 import argparse
 import codecs
-import time
+import logging
 import multiprocessing
 import Queue
+import re
 import string
 import sys
-import re
+import time
 
 from collections import Counter
 from os import listdir
@@ -70,22 +71,35 @@ class Worker(multiprocessing.Process):
 def main():
 
     parser = argparse.ArgumentParser(
-            description="Script to compute unigrams frequencies.")
-    parser.add_argument("-f", "--file", help="source file to be processed") 
+        description="Script to compute unigrams frequencies.")
+    parser.add_argument("-f", "--file", help="source file to be processed")
     parser.add_argument("-d", "--directory", help="directory containing a set "
                         "of files to be processed")
     parser.add_argument("-o", "--output", help="output file with results",
                         required=True)
-    parser.add_argument("-v", "--verbose", help="print debugging information")
+    parser.add_argument("-v", "--verbose", action='store_true',
+                        help="print debugging information")
 
     args = parser.parse_args()
 
+    # Adjust logger verbosity.
+    if args.verbose is True:
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+        logging.basicConfig(level=logging.ERROR,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+
+    logger = logging.getLogger()
+
     # Make sure that one parameter has been setted.
     if args.file is None and args.directory is None:
-        print("ERROR: No source specified.")
+        logger.error("No source specified.")
         return -1
     if args.file is not None and args.directory is not None:
-        print("ERROR: Either specify a file or a directory.")
+        logger.error("Either specify a file or a directory.")
         return -1
 
     # Create a list with valid files ready to be processed.
@@ -93,18 +107,18 @@ def main():
         if isfile(args.file):
             files = [args.file]
         else:
-            print("ERROR: unable to find %s." % args.file)
+            logger.error("Unable to find %s." % args.file)
             return -1
     else:
         if isdir(args.directory):
             files = [f for f in listdir(args.directory)
                      if isfile(join(args.directory, f))]
             if len(files) == 0:
-                print("ERROR: %s doesn't contain valid file(s)." 
-                      % args.directory )
+                logger.error("%s doesn't contain valid file(s)."
+                             % args.directory)
                 return -1
         else:
-            print("ERROR: %s is not a directory." % args.directory)
+            logger.error("%s is not a directory." % args.directory)
             return -1
 
     begin = time.time()
@@ -120,23 +134,23 @@ def main():
         workers.append(w)
 
     for idx, filename in enumerate(files):
-        print("Begin read %s." % filename)
+        logger.debug("Begin read %s." % filename)
         directory = args.directory or "."
         with codecs.open(join(directory, filename), 'r', 'utf8') as f:
             for line in f:
                 queue.put(line)
-        print("File %s successfully read." % filename)
+        logger.debug("File %s successfully read." % filename)
         # As files can be very big, process them in batch of 10.
         if idx > 0 and idx % 10 == 0:
             queue.join()
 
-    print("All files successfully read.")
+    logger.debug("All files successfully read.")
 
-    # Join the queue with the words to be processed. This is a synchronous 
+    # Join the queue with the words to be processed. This is a synchronous
     # call, so main() will wait for workers to complete their work.
     queue.join()
 
-    print ("Every file has been processed. Merging...")
+    logger.debug("Every file has been processed. Merging...")
 
     # Merge the counters with the '+=' operator.
     counter = Counter()
@@ -147,7 +161,7 @@ def main():
     for w in workers:
         w.join()
 
-    print("Computing finished. Writing results...")
+    logger.debug("Computing finished. Writing results...")
 
     with codecs.open(args.output, 'w', 'utf8') as out:
         # Write the header.
@@ -156,7 +170,8 @@ def main():
         for k, v in counter.most_common():
             out.write("%s %d\n" % (k, v))
 
-    print("Done in %s seconds." % (time.time() - begin))
+    logger.debug("Done in %s seconds." % (time.time() - begin))
 
 if __name__ == '__main__':
     sys.exit(main())
+    

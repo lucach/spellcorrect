@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import argparse
 import codecs
 import time
 import multiprocessing
@@ -27,7 +28,7 @@ import re
 
 from collections import Counter
 from os import listdir
-from os.path import isfile, join
+from os.path import isdir, isfile, join
 
 exclude = set(u"\"!(),.:;?[]{}“”«»")
 
@@ -66,52 +67,96 @@ class Worker(multiprocessing.Process):
         self._results_queue.put(self._count)
 
 
-if __name__ == '__main__':
+def main():
+
+    parser = argparse.ArgumentParser(
+            description="Script to compute unigrams frequencies.")
+    parser.add_argument("-f", "--file", help="source file to be processed") 
+    parser.add_argument("-d", "--directory", help="directory containing a set "
+                        "of files to be processed")
+    parser.add_argument("-o", "--output", help="output file with results",
+                        required=True)
+    parser.add_argument("-v", "--verbose", help="print debugging information")
+
+    args = parser.parse_args()
+
+    # Make sure that one parameter has been setted.
+    if args.file is None and args.directory is None:
+        print("ERROR: No source specified.")
+        return -1
+    if args.file is not None and args.directory is not None:
+        print("ERROR: Either specify a file or a directory.")
+        return -1
+
+    # Create a list with valid files ready to be processed.
+    if args.file is not None:
+        if isfile(args.file):
+            files = [args.file]
+        else:
+            print("ERROR: unable to find %s." % args.file)
+            return -1
+    else:
+        if isdir(args.directory):
+            files = [f for f in listdir(args.directory)
+                     if isfile(join(args.directory, f))]
+            if len(files) == 0:
+                print("ERROR: %s doesn't contain valid file(s)." 
+                      % args.directory )
+                return -1
+        else:
+            print("ERROR: %s is not a directory." % args.directory)
+            return -1
 
     begin = time.time()
-    print(begin)
-
-    files = [f for f in listdir(sys.argv[1]) if isfile(join(sys.argv[1], f))]
 
     workers = []
     queue = multiprocessing.JoinableQueue()
     results_queue = multiprocessing.Queue()
 
+    # Spawn a process for every CPU.
     for _ in range(multiprocessing.cpu_count()):
         w = Worker(queue, results_queue)
         w.start()
         workers.append(w)
 
     for idx, filename in enumerate(files):
-        print("Begin read " + filename)
-        with codecs.open(join(sys.argv[1], filename), 'r', 'utf8') as f:
+        print("Begin read %s." % filename)
+        directory = args.directory or "."
+        with codecs.open(join(directory, filename), 'r', 'utf8') as f:
             for line in f:
                 queue.put(line)
-        print("File " + filename + " successfully read.")
+        print("File %s successfully read." % filename)
+        # As files can be very big, process them in batch of 10.
         if idx > 0 and idx % 10 == 0:
-            print("10 files read. Wait for computation...")
             queue.join()
 
-    print "All files successfully read."
+    print("All files successfully read.")
 
+    # Join the queue with the words to be processed. This is a synchronous 
+    # call, so main() will wait for workers to complete their work.
     queue.join()
 
-    print ("All items have been processed. Merging...")
+    print ("Every file has been processed. Merging...")
 
+    # Merge the counters with the '+=' operator.
     counter = Counter()
     for _ in workers:
         counter += results_queue.get()
 
+    # Clean process table by joining workers.
     for w in workers:
         w.join()
 
     print("Computing finished. Writing results...")
 
-    with codecs.open(sys.argv[2], 'w', 'utf8') as out:
-        out.write(str(len(counter.values())) + " " + str(sum(counter.values()))
-                  + "\n")
+    with codecs.open(args.output, 'w', 'utf8') as out:
+        # Write the header.
+        out.write("%d %d\n" % (len(counter.values()), sum(counter.values())))
 
         for k, v in counter.most_common():
-            out.write(k + " " + str(v) + "\n")
+            out.write("%s %d\n" % (k, v))
 
-    print("Done in " + str(time.time() - begin))
+    print("Done in %s seconds." % (time.time() - begin))
+
+if __name__ == '__main__':
+    sys.exit(main())

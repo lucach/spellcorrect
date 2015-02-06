@@ -27,12 +27,12 @@ from os.path import join
 if __name__ == '__main__':
 
     r = redis.StrictRedis(host=sys.argv[2], port=6379, db=sys.argv[3])
-    
+
     with codecs.open(join('.', sys.argv[1]), 'r', 'utf8') as f:
-        pipe = r.pipeline() 
-        linecounter = 0   
+        pipe = r.pipeline()
+        linecounter = 0
         for line in f:
-            if linecounter > 0: # skip first line
+            if linecounter > 0:  # skip first line
                 vals = line.rsplit(' ', 1)
                 pipe.set(vals[0], vals[1])
                 # Save every 10K keys.

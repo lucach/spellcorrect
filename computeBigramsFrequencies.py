@@ -31,6 +31,7 @@ from os.path import isfile, join
 
 exclude = set(u"\"!(),.:;?[]{}“”«»")
 
+
 class Worker(multiprocessing.Process):
 
     def __init__(self, queue, results_queue):
@@ -52,13 +53,14 @@ class Worker(multiprocessing.Process):
             for idx, word in enumerate(pair):
                 word = ''.join(c for c in word if c not in exclude)
                 search = re.compile(r'[^0-9 -/]').search
-                word = word.replace(u"’","'")
+                word = word.replace(u"’", "'")
                 word = word.lower()
                 if not bool(search(word)) or not word or len(word) > 50:
                     good = False
                 pair[idx] = word
             if good:
                 self._count[" ".join(pair)] += 1
+
     def run(self):
         while True:
             line = None
@@ -81,27 +83,26 @@ if __name__ == '__main__':
     begin = time.time()
     print(begin)
 
-    files = [ f for f in listdir(sys.argv[1]) if isfile(join(sys.argv[1],f)) ]
+    files = [f for f in listdir(sys.argv[1]) if isfile(join(sys.argv[1], f))]
 
     workers = []
     queue = multiprocessing.JoinableQueue()
     results_queue = multiprocessing.Queue()
-    
+
     for _ in range(multiprocessing.cpu_count()):
         w = Worker(queue, results_queue)
-        w.start()        
+        w.start()
         workers.append(w)
 
-    for idx, filename in enumerate(files):  
+    for idx, filename in enumerate(files):
         print("Begin read " + filename)
         with codecs.open(join(sys.argv[1], filename), 'r', 'utf8') as f:
             for line in f:
                 queue.put(line)
         print("File " + filename + " successfully read.")
-	if idx > 0 and idx % 5 == 0:
-	    print("5 files read. Wait for computation...")
+        if idx > 0 and idx % 5 == 0:
+            print("5 files read. Wait for computation...")
             queue.join()
-
 
     print "All files successfully read."
 
@@ -115,11 +116,12 @@ if __name__ == '__main__':
 
     for w in workers:
         w.join()
-   
+
     print("Computing finished. Writing results...")
 
     with codecs.open(sys.argv[2], 'w', 'utf8') as out:
-        out.write(str(len(counter.values())) + " " + str(sum(counter.values())) + "\n")
+        out.write(str(len(counter.values())) + " " + str(sum(counter.values()))
+                  + "\n")
 
         for k, v in counter.most_common():
             if v == 1:

@@ -4,7 +4,7 @@
 # Spell corrector - http://www.chiodini.org/
 # Copyright © 2014-2015 Luca Chiodini <luca@chiodini.org>
 #
-# The algorithm for spelling correction is taken from 
+# The algorithm for spelling correction is taken from
 # http://norvig.com/spell-correct.html
 #
 # This program is free software: you can redistribute it and/or modify
@@ -41,6 +41,7 @@ BIGRAM_NOT_FOUND_P = 1 / BIGRAMS_SUM
 
 NWORDS = set(WORDS_REDIS.keys())
 
+
 def edits1(word):
     splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
     deletes = [a + b[1:] for a, b in splits if b]
@@ -49,11 +50,14 @@ def edits1(word):
     inserts = [a + c + b for a, b in splits for c in alphabet]
     return set(deletes + transposes + replaces + inserts)
 
+
 def known_edits2(word):
     return set(e2 for e1 in edits1(word) for e2 in edits1(e1) if e2 in NWORDS)
 
+
 def known(words):
     return set(w for w in words if w in NWORDS)
+
 
 def getvalue(word_list):
     w_prev = word_list[0]
@@ -76,6 +80,7 @@ def getvalue(word_list):
 
     # Watch for floating point underflow!
     return prev * cur * nex * channel_model_p
+
 
 def correct(word_prev, word, word_next):
     candidates = []
@@ -101,10 +106,11 @@ def correct(word_prev, word, word_next):
                 probability = item
 
         extended_candidates.extend(
-            [[word_prev, candidate, word_next, probability] 
+            [[word_prev, candidate, word_next, probability]
                 for candidate in current_set])
 
     return max(extended_candidates, key=getvalue)
+
 
 class web_correct(object):
     def __init__(self):
@@ -131,8 +137,8 @@ class web_correct(object):
                 if idx < 1:
                     words[idx] = correct(None, words[idx], words[idx + 1])[1]
                 elif idx < len(words) - 1:
-                    words[idx] = 
-                        correct(words[idx - 1], words[idx], words[idx + 1])[1]
+                    words[idx] = correct(words[idx - 1], words[idx],
+                                         words[idx + 1])[1]
                 else:
                     words[idx] = correct(words[idx - 1], words[idx], None)[1]
             str = ""
@@ -143,13 +149,13 @@ class web_correct(object):
 
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
-        response= self.dispatch_request(request)
+        response = self.dispatch_request(request)
         return response(environ, start_response)
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
 
-if  __name__ == '__main__':
+if __name__ == '__main__':
     app = web_correct()
     from werkzeug.serving import run_simple
     run_simple('0.0.0.0', 80, app, use_debugger=True, use_reloader=True)

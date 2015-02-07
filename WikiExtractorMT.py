@@ -1,7 +1,11 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# =============================================================================
+# Spell corrector - http://www.chiodini.org/
+# Copyright © 2014-2015 Luca Chiodini <luca@chiodini.org>
+#
+# This code is based (with minor changes) on:
+#
 #  Multithread-Wikipedia-Extractor
 #  For SMP based architectures
 #  Version: 1.0 (October 15, 2012)
@@ -61,6 +65,8 @@ from lxml import etree
 TANL = "tanl"
 # outputs json objects
 JSON = "json"
+# plain text
+PLAIN = "plain"
 
 class WikiCleanerThread(threading.Thread):
     
@@ -106,10 +112,10 @@ class WikiCleanerThread(threading.Thread):
             url = self._geturl(wiki_id)    
         
             if self._output_format == TANL:
-                #header = '<doc id="%s" url="%s" title="%s">%s\n' % (wiki_id, url, wiki_title, wiki_title)
+                header = '<doc id="%s" url="%s" title="%s">%s\n' % (wiki_id, url, wiki_title, wiki_title)
                 header = '%s\n' % (wiki_title)
                 body = ' '.join(compact(clean(wiki_text))).strip()
-                #footer = "\n</doc>"
+                footer = "\n</doc>"
                 footer = "\n\n"
                 self._outfile.write(header.encode("utf-8")) 
                 self._outfile.write(body.encode("utf-8"))
@@ -118,6 +124,14 @@ class WikiCleanerThread(threading.Thread):
             elif self._output_format == JSON:
                 article = dict(id=wiki_id, url=url, title=wiki_title, text=wiki_text)
                 self._outfile.write(json.dumps(article, encoding='utf-8') + '\n')
+
+            elif self._output_format == PLAIN:
+                title = '%s\n' % (wiki_title)
+                article = ' '.join(compact(clean(wiki_text))).strip()
+                # Skip empty articles.
+                if article:
+                    self._outfile.write(title.encode("utf-8") + 
+                                        article.encode("utf-8") + "\n\n")
         
         if self._outfile.tell() > self._maxfilesize:
             self._outfile.close()
@@ -616,14 +630,14 @@ def main():
     parser.add_argument("-c", "--compress", default=False, action="store_const", const=True, help="compress output files using bzip")
     parser.add_argument("-l", "--links", default=False, action="store_const", const=True, help="preserve links")
     parser.add_argument("-s", "--sections", default=False, action="store_const", const=True, help="preserve sections")
-    parser.add_argument("-f", "--format", choices=(TANL, JSON), default=JSON, help="choose output format default is %(default)s")
+    parser.add_argument("-f", "--format", choices=(TANL, JSON, PLAIN), default=JSON, help="choose output format default is %(default)s")
      
     args = parser.parse_args()
     
     keepLinks = args.links
     keepSections = args.sections
     
-   # Minimum size of output files
+    # Minimum size of output files
     min_file_size = 200 * 1024
     try:
         if args.bytes[-1] in 'kK':

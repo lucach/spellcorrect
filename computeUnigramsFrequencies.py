@@ -96,10 +96,10 @@ def main():
 
     # Make sure that one parameter has been setted.
     if args.file is None and args.directory is None:
-        logger.error("No source specified.")
+        logger.critical("No source specified.")
         return -1
     if args.file is not None and args.directory is not None:
-        logger.error("Either specify a file or a directory.")
+        logger.critical("Either specify a file or a directory.")
         return -1
 
     # Create a list with valid files ready to be processed.
@@ -107,18 +107,18 @@ def main():
         if isfile(args.file):
             files = [args.file]
         else:
-            logger.error("Unable to find %s." % args.file)
+            logger.critical("Unable to find %s." % args.file)
             return -1
     else:
         if isdir(args.directory):
             files = [f for f in listdir(args.directory)
                      if isfile(join(args.directory, f))]
             if len(files) == 0:
-                logger.error("%s doesn't contain valid file(s)."
+                logger.critical("%s doesn't contain valid file(s)."
                              % args.directory)
                 return -1
         else:
-            logger.error("%s is not a directory." % args.directory)
+            logger.critical("%s is not a directory." % args.directory)
             return -1
 
     begin = time.time()

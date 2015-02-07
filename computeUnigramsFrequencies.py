@@ -26,6 +26,7 @@ import re
 import string
 import sys
 import time
+import traceback
 
 from collections import Counter
 from os import listdir
@@ -88,7 +89,7 @@ def main():
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
     else:
-        logging.basicConfig(level=logging.ERROR,
+        logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -115,13 +116,13 @@ def main():
                      if isfile(join(args.directory, f))]
             if len(files) == 0:
                 logger.critical("%s doesn't contain valid file(s)."
-                             % args.directory)
+                                % args.directory)
                 return -1
         else:
             logger.critical("%s is not a directory." % args.directory)
             return -1
 
-    begin = time.time()
+    begin_time = time.time()
 
     workers = []
     queue = multiprocessing.JoinableQueue()
@@ -170,8 +171,7 @@ def main():
         for k, v in counter.most_common():
             out.write("%s %d\n" % (k, v))
 
-    logger.debug("Done in %s seconds." % (time.time() - begin))
+    logger.debug("Done in %s seconds." % (time.time() - begin_time))
 
 if __name__ == '__main__':
     sys.exit(main())
-    

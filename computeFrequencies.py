@@ -37,13 +37,22 @@ exclude = set(u"\"!(),.:;?[]{}“”«»")
 
 class Worker(multiprocessing.Process):
 
-    def __init__(self, queue, results_queue):
+    def __init__(self, queue, results_queue, type):
         multiprocessing.Process.__init__(self)
         self._queue = queue
         self._results_queue = results_queue
         self._count = Counter()
 
-    def _process(self, line):
+        if type == "unigrams":
+            self._process = self._processUnigrams
+        elif type == "bigrams":
+            self._process = self._processBigrams
+        else:
+            # It should never hit this, provided that the assertions before
+            # work as expected.
+            raise Exception("Internal error.")
+
+    def _processUnigrams(self, line):
         for word in line.split():
             word = ''.join(c for c in word if c not in exclude)
             search = re.compile(r'[^0-9 -/]').search
@@ -51,6 +60,21 @@ class Worker(multiprocessing.Process):
             word = word.lower()
             if bool(search(word)) and word and len(word) <= 50:
                 self._count[word] += 1
+
+    def _processBigrams(self, line):
+        words = line.split()
+        for word_idx in xrange(len(words) - 1):
+            pair = [words[word_idx], words[word_idx + 1]]
+            good = True
+            for idx, word in enumerate(pair):
+                word = ''.join(c for c in word if c not in exclude)
+                search = re.compile(r'[^0-9 -/]').search
+                word = word.replace(u"’", "'").lower()
+                if not bool(search(word)) or not word or len(word) > 50:
+                    good = False
+                pair[idx] = word
+            if good:
+                self._count[" ".join(pair)] += 1
 
     def run(self):
         while True:
@@ -76,6 +100,8 @@ def main():
     parser.add_argument("-f", "--file", help="source file to be processed")
     parser.add_argument("-d", "--directory", help="directory containing a set "
                         "of files to be processed")
+    parser.add_argument("-t", "--type", help="whether computing 'unigrams' or "
+                        "'bigrams'", required=True)
     parser.add_argument("-o", "--output", help="output file with results",
                         required=True)
     parser.add_argument("-v", "--verbose", action='store_true',
@@ -101,6 +127,11 @@ def main():
         return -1
     if args.file is not None and args.directory is not None:
         logger.critical("Either specify a file or a directory.")
+        return -1
+
+    # Validate the type of computation requested.
+    if not (args.type == "unigrams" or args.type == "bigrams"):
+        logger.critical("Wrong type: please specify 'unigrams' or 'bigrams'")
         return -1
 
     # Create a list with valid files ready to be processed.
@@ -130,7 +161,7 @@ def main():
 
     # Spawn a process for every CPU.
     for _ in range(multiprocessing.cpu_count()):
-        w = Worker(queue, results_queue)
+        w = Worker(queue, results_queue, args.type)
         w.start()
         workers.append(w)
 

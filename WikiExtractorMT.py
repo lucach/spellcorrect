@@ -706,8 +706,8 @@ def main():
             raise ValueError()
     except ValueError:
         print >> sys.stderr, \
-            'Insufficient or invalid bytes size (minimum per output is %d bytes)' \
-            % min_file_size
+            'Insufficient or invalid bytes size (minimum per output is %d ' \
+            'bytes)' % min_file_size
         return
 
     if not os.path.exists(args.outputdir):

@@ -18,12 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import codecs
-import time
 import multiprocessing
 import Queue
+import re
 import string
 import sys
-import re
+import time
+import traceback
 
 from collections import Counter
 from os import listdir
@@ -40,21 +41,15 @@ class Worker(multiprocessing.Process):
         self._results_queue = results_queue
         self._count = Counter()
 
-    def _pairwise(self, words):
-        a, b = tee(words)
-        next(b, None)
-        return izip(a, b)
-
     def _process(self, line):
         words = line.split()
-        for w1, w2 in self._pairwise(words):
-            pair = [w1, w2]
+        for word_idx in xrange(len(words) - 1):
+            pair = [words[word_idx], words[word_idx + 1]]
             good = True
             for idx, word in enumerate(pair):
                 word = ''.join(c for c in word if c not in exclude)
                 search = re.compile(r'[^0-9 -/]').search
-                word = word.replace(u"’", "'")
-                word = word.lower()
+                word = word.replace(u"’", "'").lower()
                 if not bool(search(word)) or not word or len(word) > 50:
                     good = False
                 pair[idx] = word
@@ -124,8 +119,6 @@ if __name__ == '__main__':
                   + "\n")
 
         for k, v in counter.most_common():
-            if v == 1:
-                break
             out.write(k + " " + str(v) + "\n")
 
     print("Done in " + str(time.time() - begin))

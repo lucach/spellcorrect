@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Spell corrector - http://www.chiodini.org/
@@ -21,7 +21,7 @@ import argparse
 import codecs
 import logging
 import multiprocessing
-import Queue
+import queue
 import re
 import string
 import sys
@@ -32,7 +32,7 @@ from collections import Counter
 from os import listdir
 from os.path import isdir, isfile, join
 
-exclude = set(u"\"!(),.:;?[]{}“”«»")
+exclude = set(u'"!(),.:;?[]{}“”«»')
 
 
 class Worker(multiprocessing.Process):
@@ -63,7 +63,7 @@ class Worker(multiprocessing.Process):
 
     def _processBigrams(self, line):
         words = line.split()
-        for word_idx in xrange(len(words) - 1):
+        for word_idx in range(len(words) - 1):
             pair = [words[word_idx], words[word_idx + 1]]
             good = True
             for idx, word in enumerate(pair):
@@ -83,7 +83,7 @@ class Worker(multiprocessing.Process):
                 line = self._queue.get(timeout=0.1)
                 if line is not None:
                     self._process(line)
-            except Queue.Empty:
+            except queue.Empty:
                 break
             except:
                 traceback.print_exc(file=sys.stdout)
@@ -156,7 +156,9 @@ def main():
     begin_time = time.time()
 
     workers = []
-    queue = multiprocessing.JoinableQueue()
+    # Limit queue size to 100k items (this is due to the fact that reading
+    # can be way more fast than computing; RAM is filled up abnormally).
+    queue = multiprocessing.JoinableQueue(100000)
     results_queue = multiprocessing.Queue()
 
     # Spawn a process for every CPU.
@@ -172,9 +174,6 @@ def main():
             for line in f:
                 queue.put(line)
         logger.debug("File %s successfully read." % filename)
-        # As files can be very big, process them in batch of 10.
-        if idx > 0 and idx % 10 == 0:
-            queue.join()
 
     logger.debug("All files successfully read.")
 

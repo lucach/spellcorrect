@@ -620,7 +620,8 @@ def handle_unicode(entity):
     return unichr(numeric_code)
 
 
-def process_data(inputdump, outputdir, maxfilesize, compress, outformat):
+def process_data(inputdump, outputdir, maxfilesize, compress, outformat,
+                 threadscount):
 
     # we expects large dumps so we are using iterparse method
     context = etree.iterparse(inputdump)
@@ -640,7 +641,7 @@ def process_data(inputdump, outputdir, maxfilesize, compress, outformat):
 
     # start worker threads
     workers = []
-    for _ in range(multiprocessing.cpu_count() - 1):
+    for _ in range(threadscount):
         cleaner = WikiCleanerThread(
             queue, outputdir, maxfilesize, prefix, compress, outformat)
         cleaner.setDaemon(True)
@@ -687,11 +688,17 @@ def main():
     parser.add_argument("-f", "--format", choices=(TANL, JSON, PLAIN),
                         default=JSON,
                         help="choose output format default is %(default)s")
+    parser.add_argument("-t", "--threads", type=int, help="number of threads" +
+                        " to spawn")
 
     args = parser.parse_args()
 
     keepLinks = args.links
     keepSections = args.sections
+
+    # Spawn a number of threads as per user's request. Otherwise fallback to
+    # the number of available CPUs.
+    threadscount = args.threads or multiprocessing.cpu_count()
 
     # Minimum size of output files
     min_file_size = 200 * 1024
@@ -721,16 +728,20 @@ def main():
                 "%s already exists, use --overwrite to recreate"
                 % args.outputdir)
 
+    if threadscount < 0:
+        raise ValueError("Invalid number of threads. Please use a positive "
+                         "number, or do not set the -t/--threads parameter.")
+
     if args.wikidump.lower().endswith("bz2"):
         with bz2.BZ2File(args.wikidump, 'r') as inputdump:
             process_data(
                 inputdump, args.outputdir, file_size, args.compress,
-                args.format.lower())
+                args.format.lower(), threadscount)
     else:
         with open(args.wikidump, 'r') as inputdump:
             process_data(
                 inputdump, args.outputdir, file_size, args.compress,
-                args.format.lower())
+                args.format.lower(), threadscount)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ class MediaWiki:
             base_URL += 'w/api.php'
         self.base_URL = base_URL
 
-    def getRecentChanges(self, start_from, n, namespace=0):
+    def getRecentChanges(self, start_from=0, n=3, namespace=0):
         parameters = {'action': 'query',
                       'format': 'json',
                       'list': 'recentchanges',

@@ -94,9 +94,10 @@ class WikiCleanerThread(threading.Thread):
         self._compress = compress
         self._outputdir = outputdir
         self._output_format = output_format
-        if not os.path.exists(outputdir):
-            os.mkdir(outputdir)
-        self._outfile = None
+        if os.path.isdir(outputdir):
+            self._outfile = None
+        else:
+            self._outfile = open(outputdir, 'w')
 
     @classmethod
     def _get_file(cls, outputdir, compress=False):
@@ -690,6 +691,8 @@ def main():
                         help="choose output format default is %(default)s")
     parser.add_argument("-t", "--threads", type=int, help="number of threads" +
                         " to spawn")
+    parser.add_argument("-o", "--output", type=str, help="name of the output" +
+                        " file (if present, overwrites OUTPUTDIR)")
 
     args = parser.parse_args()
 
@@ -717,16 +720,21 @@ def main():
             'bytes)' % min_file_size
         return
 
-    if not os.path.exists(args.outputdir):
-        os.makedirs(args.outputdir)
-    else:
-        if args.overwrite:
-            shutil.rmtree(args.outputdir)
+    # Try to create an output directory (unless the output should be a single
+    # file).
+    if not args.output:
+        if not os.path.exists(args.outputdir):
             os.makedirs(args.outputdir)
         else:
-            raise ValueError(
-                "%s already exists, use --overwrite to recreate"
-                % args.outputdir)
+            if args.overwrite:
+                shutil.rmtree(args.outputdir)
+                os.makedirs(args.outputdir)
+            else:
+                raise ValueError(
+                    "%s already exists, use --overwrite to recreate"
+                    % args.outputdir)
+    else:
+        args.outputdir = args.output
 
     if threadscount < 0:
         raise ValueError("Invalid number of threads. Please use a positive "

@@ -19,6 +19,9 @@
 
 import html
 import requests
+import tempfile
+
+from subprocess import call
 
 
 class MediaWiki:
@@ -43,7 +46,7 @@ class MediaWiki:
         return r['query']['recentchanges']
 
     def getPageReviews(self, revIDs):
-        # Return None for an empty list
+        # Return None for an empty list.
         if not revIDs:
             return None
 
@@ -64,7 +67,7 @@ class MediaWiki:
         response = []
         page = next(iter(r['query']['pages'].values()))
         for revision in page['revisions']:
-            response.append({'content:': html.escape(revision['*']),
+            response.append({'content': html.escape(revision['*']),
                              'pageid': page['pageid'],
                              'title': page['title']
                              })
@@ -72,14 +75,52 @@ class MediaWiki:
 
 
 def main():
-    mediaWiki = MediaWiki('http://it.wikipedia.org/')
+    URL = 'http://it.wikipedia.org/'
+
+    mediaWiki = MediaWiki(URL)
     for item in mediaWiki.getRecentChanges(0, 1):
         print(item['revid'])
         print(item['old_revid'])
-        resp = mediaWiki.getPageXMLByRevID([item['revid'], item['old_revid']])
+        revs = mediaWiki.getPageReviews([item['revid'], item['old_revid']])
 
-        for rev in resp:
-            print(rev)
+        # Create a temporary workspace.
+        with tempfile.TemporaryDirectory() as path:
+            # Create XML files.
+
+            # Old revision (if present).
+            if item['old_revid'] > 0:
+                with open(path + '/old.xml', 'w') as f:
+                    f.write("<mediawiki>")
+                    f.write("<base>" + URL + "wiki" + "</base>")
+                    f.write("<page>")
+                    f.write("<title>" + revs[0]['title'] + "</title>")
+                    f.write("<id>" + str(revs[0]['pageid']) + "</id>")
+                    f.write("<revision>")
+                    f.write("<id>" + str(item['old_revid']) + "</id>")
+                    f.write("<text>" + revs[0]['content'] + "</text>")
+                    f.write("</revision></page></mediawiki>")
+
+            # New revision.
+            with open(path + '/new.xml', 'w') as f:
+                f.write("<mediawiki>")
+                f.write("<base>" + URL + "wiki" + "</base>")
+                f.write("<page>")
+                f.write("<title>" + revs[1]['title'] + "</title>")
+                f.write("<id>" + str(revs[1]['pageid']) + "</id>")
+                f.write("<revision>")
+                f.write("<id>" + str(item['revid']) + "</id>")
+                f.write("<text>" + revs[1]['content'] + "</text>")
+                f.write("</revision></page></mediawiki>")
+
+            # Execute WikiExtractor to clean WikiText syntax.
+            # These two calls should produce old.raw and new.raw.
+            # TODO Catch exceptions.
+
+            call(["./WikiExtractorMT.py", "-fplain", "-t1",
+                  "-o" + path + "/old.raw", path + "/old.xml", ""])
+            call(["./WikiExtractorMT.py", "-fplain", "-t1",
+                  "-o" + path + "/new.raw", path + "/new.xml", ""])
+
 
 if __name__ == '__main__':
     main()

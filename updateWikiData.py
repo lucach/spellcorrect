@@ -121,6 +121,19 @@ def main():
             call(["./WikiExtractorMT.py", "-fplain", "-t1",
                   "-o" + path + "/new.raw", path + "/new.xml", ""])
 
+            # Execute computeFrequencies to get {old, new}.{unigrams, bigrams}
+            # frequencies.
+            # TODO Catch exceptions.
+
+            call(["./computeFrequencies.py", "-tunigrams",
+                  "-f" + path + "/old.raw", "-o" + path + "/old.unigrams"])
+            call(["./computeFrequencies.py", "-tunigrams",
+                  "-f" + path + "/new.raw", "-o" + path + "/new.unigrams"])
+            call(["./computeFrequencies.py", "-tbigrams",
+                  "-f" + path + "/old.raw", "-o" + path + "/old.bigrams"])
+            call(["./computeFrequencies.py", "-tbigrams",
+                  "-f" + path + "/new.raw", "-o" + path + "/new.bigrams"])
+
 
 if __name__ == '__main__':
     main()

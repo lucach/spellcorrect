@@ -17,18 +17,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import codecs
 import html
 import json
 import logging
 import os
 import random
+import redis
 import requests
 import string
 import tempfile
 import time
 
+from collections import Counter
 from datetime import datetime
 from subprocess import call
+
+REDIS_UNIGRAMS_DB = 0
+REDIS_BIGRAMS_DB = 1
 
 
 class MediaWiki:
@@ -89,6 +95,24 @@ class MediaWiki:
         return response
 
 
+def update_redis_key(redis, key, delta):
+    # Redis transaction.
+    with redis.pipeline() as pipe:
+        while 1:
+            try:
+                pipe.watch(key)
+                current_value = pipe.get(key)
+                if current_value is None:
+                    current_value = 0
+                next_value = int(current_value) + delta
+                pipe.multi()
+                pipe.set(key, next_value)
+                pipe.execute()
+                break
+            except WatchError:
+                continue
+
+
 def main():
     URL = 'http://it.wikipedia.org/'
     logger = logging.getLogger()
@@ -101,6 +125,7 @@ def main():
             conf = json.loads(conf_file.read())
             start_from = datetime.strptime(conf['start_from'], '%Y%m%d%H%M%S')
             last_id = conf['last_id']
+            redis_host = conf['redis_host']
     except FileNotFoundError:
         logger.warning("No config file found. Using default values.")
     except ValueError:
@@ -114,7 +139,7 @@ def main():
     new_last_id = 0
 
     tmp = mediaWiki.getRecentChanges(start_from, last_id)
-    print(tmp)
+    print(len(tmp))
 
     # Create a temporary workspace.
     temp_env = tempfile.TemporaryDirectory()
@@ -127,6 +152,9 @@ def main():
     with open(path + '/new.xml', 'w', encoding='utf-8') as f:
         f.write("<mediawiki>")
         f.write("<base>" + URL + "wiki" + "</base>")
+
+    if len(tmp) == 0:
+        return 0
 
     # Write XML body.
     for item in tmp:
@@ -201,7 +229,65 @@ def main():
     call(["./computeFrequencies.py", "-tbigrams",
           "-f" + path + "/new.raw", "-o" + path + "/new.bigrams"])
 
-    # TODO Here do something with what we've just produced (send to Redis) :-)
+    # Compute delta frequencies between {old, new}.unigrams and store them in a
+    # python Counter.
+
+    uni_redis = redis.StrictRedis(host=conf['redis_host'], port=6379,
+                                  db=REDIS_UNIGRAMS_DB)
+    uni_counter = Counter()
+
+    with codecs.open(path + '/old.unigrams', 'r', 'utf8') as f:
+        lines = 0
+        for line in f:
+            if lines > 0:  # skip first line (which is the header)
+                vals = line.rsplit(' ', 1)
+                # Subtract old values.
+                uni_counter[vals[0]] -= int(vals[1])
+            lines += 1
+    with codecs.open(path + '/new.unigrams', 'r', 'utf8') as f:
+        lines = 0
+        for line in f:
+            if lines > 0:  # skip first line (which is the header)
+                vals = line.rsplit(' ', 1)
+                # Add new values.
+                uni_counter[vals[0]] += int(vals[1])
+            lines += 1
+
+    # Compute delta frequencies between {old, new}.bigrams and store them in a
+    # python Counter.
+
+    bi_redis = redis.StrictRedis(host=conf['redis_host'], port=6379,
+                                 db=REDIS_BIGRAMS_DB)
+    bi_counter = Counter()
+
+    with codecs.open(path + '/old.bigrams', 'r', 'utf8') as f:
+        lines = 0
+        for line in f:
+            if lines > 0:  # skip first line (which is the header)
+                vals = line.rsplit(' ', 1)
+                # Subtract old values.
+                uni_counter[vals[0]] -= int(vals[1])
+            lines += 1
+    with codecs.open(path + '/new.bigrams', 'r', 'utf8') as f:
+        lines = 0
+        for line in f:
+            if lines > 0:  # skip first line (which is the header)
+                vals = line.rsplit(' ', 1)
+                # Add new values.
+                uni_counter[vals[0]] += int(vals[1])
+            lines += 1
+
+    # Send unigrams data to redis.
+    for key, delta in uni_counter.items():
+        # Skip trivial items.
+        if delta != 0:
+            update_redis_key(uni_redis, key, delta)
+
+    # Send bigrams data to redis
+    for key, delta in bi_counter.items():
+        # Skip trivial items.
+        if delta != 0:
+            update_redis_key(bi_redis, key, delta)
 
     # Cleanup temporary data.
     temp_env.cleanup()
@@ -209,7 +295,8 @@ def main():
     # Try to write config file with new values.
     with open('updateWikiData.conf', 'w') as conf_file:
         conf = {'start_from': new_start_from.strftime('%Y%m%d%H%M%S'),
-                'last_id': new_last_id}
+                'last_id': new_last_id,
+                'redis_host': redis_host}
         conf_file.write(json.dumps(conf))
 
 if __name__ == '__main__':

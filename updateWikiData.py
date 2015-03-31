@@ -35,6 +35,8 @@ from subprocess import call
 
 REDIS_UNIGRAMS_DB = 0
 REDIS_BIGRAMS_DB = 1
+URL = 'http://it.wikipedia.org/'
+logger = logging.getLogger()
 
 
 class MediaWiki:
@@ -84,14 +86,18 @@ class MediaWiki:
                       'rvprop': 'content',
                       'revids': revIDs_string}
         r = requests.get(self.base_URL, params=parameters).json()
-
         response = []
         page = next(iter(r['query']['pages'].values()))
-        for revision in page['revisions']:
-            response.append({'content': html.escape(revision['*']),
-                             'pageid': page['pageid'],
-                             'title': page['title']
-                             })
+        try:
+            for revision in page['revisions']:
+                response.append({'content': html.escape(revision['*']),
+                                 'pageid': page['pageid'],
+                                 'title': page['title']
+                                 })
+        # Silently ignore any kind of error (e.g., deleted page which do not
+        # have attributes we'd like to retrieve)
+        except KeyError:
+            pass
         return response
 
 
@@ -113,9 +119,7 @@ def update_redis_key(redis, key, delta):
                 continue
 
 
-def main():
-    URL = 'http://it.wikipedia.org/'
-    logger = logging.getLogger()
+def execute():
 
     # Try to read the config file with initial values.
     start_from = datetime.min
@@ -167,6 +171,11 @@ def main():
             continue
 
         revs = mediaWiki.getPageReviews([item['revid'], item['old_revid']])
+
+        if len(revs) != 2:
+            logger.warning("Ignoring revisions " + str(item['revid']) + " and "
+                           + str(item['old_revid']) + " (bad API response).")
+            continue
 
         # Update new_last_id and new_start_from.
         new_last_id = max(new_last_id, item['rcid'])
@@ -298,6 +307,20 @@ def main():
                 'last_id': new_last_id,
                 'redis_host': redis_host}
         conf_file.write(json.dumps(conf))
+
+
+def main():
+    # Loop forever and execute the core program with these settings:
+    # - Do not launch concurrent request
+    # - Wait (at least) 60 seconds between two requests
+    # - If a request takes longer than 60 seconds, start the following one
+    #   as soon as possible.
+    while True:
+        begin = time.time()
+        execute()
+        if (time.time() - begin < 60.0):
+            time.sleep(60.0 - (time.time() - begin))
+
 
 if __name__ == '__main__':
     main()

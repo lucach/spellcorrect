@@ -132,7 +132,7 @@ def execute():
             redis_host = conf['redis_host']
     except FileNotFoundError:
         logger.warning("No config file found. Using default values.")
-    except ValueError:
+    except (KeyError, ValueError):
         logger.warning("Corrupted config file. Using default values.")
 
     mediaWiki = MediaWiki(URL)

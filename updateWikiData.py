@@ -227,14 +227,12 @@ def execute():
     # frequencies.
     # TODO Catch exceptions.
 
-    if item['old_revid'] > 0:
-        call(["./computeFrequencies.py", "-tunigrams",
-              "-f" + path + "/old.raw", "-o" + path + "/old.unigrams"])
+    call(["./computeFrequencies.py", "-tunigrams",
+          "-f" + path + "/old.raw", "-o" + path + "/old.unigrams"])
     call(["./computeFrequencies.py", "-tunigrams",
           "-f" + path + "/new.raw", "-o" + path + "/new.unigrams"])
-    if item['old_revid'] > 0:
-        call(["./computeFrequencies.py", "-tbigrams",
-              "-f" + path + "/old.raw", "-o" + path + "/old.bigrams"])
+    call(["./computeFrequencies.py", "-tbigrams",
+          "-f" + path + "/old.raw", "-o" + path + "/old.bigrams"])
     call(["./computeFrequencies.py", "-tbigrams",
           "-f" + path + "/new.raw", "-o" + path + "/new.bigrams"])
 

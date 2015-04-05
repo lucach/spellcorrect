@@ -17,36 +17,79 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import argparse
 import codecs
+import logging
 import redis
 import sys
 
-from os.path import join
 
+def main():
 
-if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="Script to send frequencies to a redis database.")
+    parser.add_argument("-f", "--file", help="source file with frequencies",
+                        required=True)
+    parser.add_argument("--host", help="redis host (default localhost)",
+                        default="127.0.0.1")
+    parser.add_argument("--port", help="redis port (default 6379)",
+                        default=6379, type=int)
+    parser.add_argument("--db", help="redis database (default 0)", default=0,
+                        type=int)
+    parser.add_argument("--min", help="do not send keys with value less than" +
+                        " MIN", default=0, type=int)
+    parser.add_argument("-v", "--verbose", action='store_true',
+                        help="print debugging information")
 
-    r = redis.StrictRedis(host=sys.argv[2], port=6379, db=sys.argv[3])
+    args = parser.parse_args()
+    logger = logging.getLogger()
 
-    with codecs.open(join('.', sys.argv[1]), 'r', 'utf8') as f:
+    # Adjust logger verbosity.
+    if args.verbose is True:
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+        logging.basicConfig(level=logging.WARNING,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+
+    # Unfortunately we cannot catch exceptions here as redis's library uses a
+    # custom connection pool and just assumes that the database is alive and
+    # reachable.
+    r = redis.StrictRedis(host=args.host, port=args.port, db=args.db)
+
+    print(args.min)
+
+    linecounter = 0
+    with codecs.open(args.file, 'r', 'utf8') as f:
         pipe = r.pipeline()
-        linecounter = 0
         for line in f:
             if linecounter > 0:  # skip first line
                 vals = line.rsplit(' ', 1)
+                if (int(vals[1]) < args.min):
+                    continue
                 pipe.set(vals[0], vals[1])
-                # Save every 10K keys.
+                # Force redis to save every 10K keys.
                 if linecounter > 0 and linecounter % 10000 == 0:
                     res = pipe.execute()
                     if (False in res):
-                        print("An error occurred during saving process!")
+                        logger.error("An error occured during saving process.")
                     else:
-                        print("Save %d keys!" % linecounter)
+                        logger.debug("Saved %d keys" % linecounter)
             linecounter += 1
         pipe.execute()
-        try:
-            r.save()
-        except:
-            # save() fails if a concurrent, redis-initiated saving process is
-            # in progress.
-            pass
+
+    # Try to force a final save.
+    try:
+        r.save()
+    except:
+        # save() fails if a concurrent, redis-initiated saving process is
+        # already in progress. So we should not worry too much, everything will
+        # be good in a few seconds.
+        pass
+
+    logger.debug("Successfully done (%d keys sent)." % (linecounter - 1))
+
+if __name__ == '__main__':
+    sys.exit(main())

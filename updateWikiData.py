@@ -124,6 +124,7 @@ def execute():
     # Try to read the config file with initial values.
     start_from = datetime.min
     last_id = 0
+    redis_host = "127.0.0.1"
     try:
         with open('updateWikiData.conf', 'r') as conf_file:
             conf = json.loads(conf_file.read())
@@ -132,7 +133,7 @@ def execute():
             redis_host = conf['redis_host']
     except FileNotFoundError:
         logger.warning("No config file found. Using default values.")
-    except ValueError:
+    except (KeyError, ValueError):
         logger.warning("Corrupted config file. Using default values.")
 
     mediaWiki = MediaWiki(URL)
@@ -239,7 +240,7 @@ def execute():
     # Compute delta frequencies between {old, new}.unigrams and store them in a
     # python Counter.
 
-    uni_redis = redis.StrictRedis(host=conf['redis_host'], port=6379,
+    uni_redis = redis.StrictRedis(host=redis_host, port=6379,
                                   db=REDIS_UNIGRAMS_DB)
     uni_counter = Counter()
 
@@ -263,7 +264,7 @@ def execute():
     # Compute delta frequencies between {old, new}.bigrams and store them in a
     # python Counter.
 
-    bi_redis = redis.StrictRedis(host=conf['redis_host'], port=6379,
+    bi_redis = redis.StrictRedis(host=redis_host, port=6379,
                                  db=REDIS_BIGRAMS_DB)
     bi_counter = Counter()
 

@@ -36,6 +36,7 @@ def main():
                         default=6379, type=int)
     parser.add_argument("--db", help="redis database (default 0)", default=0,
                         type=int)
+    parser.add_argument("--password", help="redis password (optional)")
     parser.add_argument("--min", help="do not send keys with value less than" +
                         " MIN", default=0, type=int)
     parser.add_argument("-v", "--verbose", action='store_true',
@@ -57,9 +58,8 @@ def main():
     # Unfortunately we cannot catch exceptions here as redis's library uses a
     # custom connection pool and just assumes that the database is alive and
     # reachable.
-    r = redis.StrictRedis(host=args.host, port=args.port, db=args.db)
-
-    print(args.min)
+    r = redis.StrictRedis(host=args.host, port=args.port, db=args.db,
+                          password=args.password)
 
     linecounter = 0
     with codecs.open(args.file, 'r', 'utf8') as f:

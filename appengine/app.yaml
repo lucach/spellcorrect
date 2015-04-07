@@ -1,8 +1,12 @@
 application: it-spellcorrect
-version: 1
+version: beta
 runtime: python27
 api_version: 1
 threadsafe: yes
+instance_class: B2
+basic_scaling:
+  max_instances: 1
+  idle_timeout: 5m
 handlers:
 - url: .*
   script: main.app

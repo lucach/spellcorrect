@@ -1,4 +1,5 @@
 res/
 test/
+appengine/config.yaml
 updateWikiData.conf
 .vimrc

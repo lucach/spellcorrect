@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 # Spell corrector - http://www.chiodini.org/
 # Copyright © 2015 Luca Chiodini <luca@chiodini.org>
@@ -23,6 +24,7 @@ import collections
 import datetime
 import redis
 import sys
+import yaml
 
 from flask import Flask
 from flask.ext import restful
@@ -41,21 +43,22 @@ with codecs.open('words', 'r', 'utf8') as f:
 init_time = datetime.datetime.now()
 
 # Redis connections.
-UNIGRAMS_REDIS = redis.StrictRedis(host='chiodini.no-ip.org', port=6379, db=0)
-BIGRAMS_REDIS = redis.StrictRedis(host='chiodini.no-ip.org', port=6379, db=1)
 
+# Try to read Redis's password from config.yaml. Silently ignore errors.
+password = None
+try:
+    with open('config.yaml', 'r') as f:
+        cfg = yaml.load(f)
+    password = cfg['password']
+except (IOError, KeyError, ValueError):
+    raise
 
-# Raw probabilities.
-UNIGRAMS_SUM = 311683252
-BIGRAMS_SUM = 300305000
+UNIGRAMS_REDIS = redis.StrictRedis(host='redis.spellcorrect.chiodini.org',
+                                   port=6379, db=0, password=password)
+BIGRAMS_REDIS = redis.StrictRedis(host='redis.spellcorrect.chiodini.org',
+                                  port=6379, db=1, password=password)
 
-
-def unigram_not_found_p():
-    return 1 / UNIGRAMS_SUM
-
-
-def bigram_not_found_p():
-    return 1 / BIGRAMS_SUM
+queries = 0
 
 
 def edits1(word):
@@ -73,29 +76,6 @@ def known_edits2(word):
 
 def known(words):
     return set(w for w in words if w in WORDS)
-
-
-def getvalue(word_list):
-    w_prev = word_list[0]
-    w = word_list[1]
-    w_next = word_list[2]
-    channel_model_p = word_list[3]
-
-    try:
-        prev = int(BIGRAMS_REDIS.get(w_prev + " " + w)) / BIGRAMS_SUM
-    except:
-        prev = bigram_not_found_p()
-    try:
-        cur = int(UNIGRAMS_REDIS.get(w)) / UNIGRAMS_SUM
-    except:
-        cur = unigram_not_found_p()
-    try:
-        nex = int(BIGRAMS_REDIS.get(w + " " + w_next)) / BIGRAMS_SUM
-    except:
-        nex = bigram_not_found_p()
-
-    # Watch for floating point underflow!
-    return prev * cur * nex * channel_model_p
 
 
 def correct(word_prev, word, word_next):
@@ -125,7 +105,57 @@ def correct(word_prev, word, word_next):
             [[word_prev, candidate, word_next, probability]
                 for candidate in current_set])
 
-    return max(extended_candidates, key=getvalue)
+    # TODO REMOVE Display queries for debug purposes.
+    global queries
+    queries = 3 * len(extended_candidates)
+
+    # As the number of queries can be really high and we aim for efficiency,
+    # a critical aspect is the number of back-and-forth TCP packets between the
+    # client and the server. Redis instance can theoretically be in a different
+    # server; this adds some latency to every single query (in the order of
+    # tens of milliseconds) and leads to unacceptable global response times.
+    # By taking advantage of Redis pipelines, all the queries are initially
+    # buffered and then issued at once, dramatically increasing performances.
+
+    unigrams_pipe = UNIGRAMS_REDIS.pipeline(transaction=False)
+    bigrams_pipe = BIGRAMS_REDIS.pipeline(transaction=False)
+
+    for candidate in extended_candidates:
+        w_prev = candidate[0]
+        w = candidate[1]
+        w_next = candidate[2]
+        channel_model_p = candidate[3]
+
+        try:
+            unigrams_pipe.get(w)
+        except:
+            raise
+
+        try:
+            bigrams_pipe.get(w_prev + " " + w)
+        except:  # dummy value
+            bigrams_pipe.get("")
+
+        try:
+            bigrams_pipe.get(w + " " + w_prev)
+        except:  # dummy value
+            bigrams_pipe.get("")
+
+    # Execute pipelines in a single command.
+    unigrams_values = unigrams_pipe.execute()
+    bigrams_values = bigrams_pipe.execute()
+
+    # Compute the probability for each candidate.
+    for idx, candidate in enumerate(extended_candidates):
+        p1 = unigrams_values[idx] or 1.0
+        p2 = bigrams_values[2 * idx] or 1.0
+        p3 = bigrams_values[2 * idx + 1] or 1.0
+        p4 = candidate[3]
+        candidate.append(int(p1) * int(p2) * int(p3) * p4)
+
+    # Return the maximum (choosing on the fifth parameter, i.e. the
+    # computed probability).
+    return max(extended_candidates, key=lambda c: c[4])
 
 
 class Corrector(restful.Resource):
@@ -153,6 +183,7 @@ class Corrector(restful.Resource):
                 'corrected': res}
 
     def get(self, words_str):
+        begin_time = datetime.datetime.now()
         # Try to save resources and reduce response time retrieving
         # the answer from cache.
         res = memcache.get(words_str)
@@ -164,6 +195,8 @@ class Corrector(restful.Resource):
             res['cache'] = True
 
         res['init_time'] = init_time.isoformat()
+        res['queries'] = queries
+        res['elapsed_time'] = str(datetime.datetime.now() - begin_time)
         return res
 
 api.add_resource(Corrector, '/correct/<words_str>')

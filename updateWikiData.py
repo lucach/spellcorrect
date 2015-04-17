@@ -125,12 +125,14 @@ def execute():
     start_from = datetime.min
     last_id = 0
     redis_host = "127.0.0.1"
+    redis_password = None
     try:
         with open('updateWikiData.conf', 'r') as conf_file:
             conf = json.loads(conf_file.read())
             start_from = datetime.strptime(conf['start_from'], '%Y%m%d%H%M%S')
             last_id = conf['last_id']
             redis_host = conf['redis_host']
+            redis_password = conf['redis_password']
     except FileNotFoundError:
         logger.warning("No config file found. Using default values.")
     except (KeyError, ValueError):
@@ -241,7 +243,8 @@ def execute():
     # python Counter.
 
     uni_redis = redis.StrictRedis(host=redis_host, port=6379,
-                                  db=REDIS_UNIGRAMS_DB)
+                                  db=REDIS_UNIGRAMS_DB,
+                                  password=redis_password)
     uni_counter = Counter()
 
     with codecs.open(path + '/old.unigrams', 'r', 'utf8') as f:
@@ -265,7 +268,7 @@ def execute():
     # python Counter.
 
     bi_redis = redis.StrictRedis(host=redis_host, port=6379,
-                                 db=REDIS_BIGRAMS_DB)
+                                 db=REDIS_BIGRAMS_DB, password=redis_password)
     bi_counter = Counter()
 
     with codecs.open(path + '/old.bigrams', 'r', 'utf8') as f:
@@ -304,7 +307,8 @@ def execute():
     with open('updateWikiData.conf', 'w') as conf_file:
         conf = {'start_from': new_start_from.strftime('%Y%m%d%H%M%S'),
                 'last_id': new_last_id,
-                'redis_host': redis_host}
+                'redis_host': redis_host,
+                'redis_password': redis_password}
         conf_file.write(json.dumps(conf))
 
 

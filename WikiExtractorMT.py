@@ -58,6 +58,7 @@ Each file contains several documents in the format:
 import Queue
 import threading
 import argparse
+import codecs
 import shutil
 import json
 import sys
@@ -123,8 +124,7 @@ class WikiCleanerThread(threading.Thread):
 
         colon = wiki_title.find(':')
         if colon < 0 or wiki_title[:colon] in acceptedNamespaces:
-            print "[%s] [%s]" % (wiki_id.encode('utf-8'),
-                                 wiki_title.encode('utf-8'))
+            print "[%s] [%s]" % (wiki_id, wiki_title)
 
             url = self._geturl(wiki_id)
 
@@ -135,9 +135,9 @@ class WikiCleanerThread(threading.Thread):
                 body = ' '.join(compact(clean(wiki_text))).strip()
                 footer = "\n</doc>"
                 footer = "\n\n"
-                self._outfile.write(header.encode("utf-8"))
-                self._outfile.write(body.encode("utf-8"))
-                self._outfile.write(footer.encode("utf-8"))
+                self._outfile.write(header)
+                self._outfile.write(body)
+                self._outfile.write(footer)
 
             elif self._output_format == JSON:
                 article = dict(
@@ -150,8 +150,7 @@ class WikiCleanerThread(threading.Thread):
                 article = ' '.join(compact(clean(wiki_text))).strip()
                 # Skip empty articles.
                 if article:
-                    self._outfile.write(title.encode("utf-8") +
-                                        article.encode("utf-8") + "\n\n")
+                    self._outfile.write(title + article + "\n\n")
 
         if self._outfile.tell() > self._maxfilesize:
             self._outfile.close()

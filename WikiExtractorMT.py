@@ -97,7 +97,7 @@ class WikiCleanerThread(threading.Thread):
         if os.path.isdir(outputdir):
             self._outfile = None
         else:
-            self._outfile = open(outputdir, 'w')
+            self._outfile = codecs.open(outputdir, 'w', encoding='utf8')
 
     @classmethod
     def _get_file(cls, outputdir, compress=False):
@@ -112,7 +112,7 @@ class WikiCleanerThread(threading.Thread):
             if compress:
                 return bz2.BZ2File(fpath, 'w')
 
-            return open(fpath, 'w')
+            return codecs.open(fpath, 'w', encoding='utf8')
 
     def _geturl(self, wiki_id):
         return "%s?curid=%s" % (self._prefix, wiki_id)

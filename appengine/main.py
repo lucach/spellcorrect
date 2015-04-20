@@ -22,17 +22,22 @@ from __future__ import division
 import codecs
 import collections
 import datetime
+import flask_restful
 import redis
 import sys
 import yaml
 
 from flask import Flask
-from flask.ext import restful
+
+from flask_restful.utils import cors
 from google.appengine.api import memcache
 
 
 app = Flask(__name__)
-api = restful.Api(app)
+api = flask_restful.Api(app)
+# Enable CORS.
+api.decorators = [cors.crossdomain(origin='*')]
+
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 
 # Read words set.
@@ -158,7 +163,7 @@ def correct(word_prev, word, word_next):
     return max(extended_candidates, key=lambda c: c[4])
 
 
-class Corrector(restful.Resource):
+class Corrector(flask_restful.Resource):
     def parse(self, words_str):
         words = words_str.split()
         res = ""

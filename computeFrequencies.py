@@ -96,7 +96,7 @@ class Worker(multiprocessing.Process):
 def main():
 
     parser = argparse.ArgumentParser(
-        description="Script to compute unigrams frequencies.")
+        description="Script to compute unigrams and/or bigrams frequencies.")
     parser.add_argument("-f", "--file", help="source file to be processed")
     parser.add_argument("-d", "--directory", help="directory containing a set "
                         "of files to be processed")

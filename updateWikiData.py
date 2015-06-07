@@ -40,6 +40,17 @@ logger = logging.getLogger()
 
 
 def update_redis_key(redis, key, delta):
+    """Update redis instance values.
+
+    In details, add 'delta' to the current value of the key 'key'.
+    To avoid dirty reads, do it within a transaction.
+
+    redis (redis.client.StrictRedis): an established connection to a Redis
+        instance.
+    key (string): the name of the key that has to be updated.
+    delta (int): the value to be added to 'key'.
+
+    """
     # Redis transaction.
     with redis.pipeline() as pipe:
         while 1:
@@ -58,6 +69,17 @@ def update_redis_key(redis, key, delta):
 
 
 def execute():
+    """Execute a cycle of the program.
+
+    Each cycle consists in:
+    - read config values
+    - get recent changes
+    - for each change retrieve original and new pages
+    - clean MediaWiki syntax with WikiExtractor
+    - compute frequencies
+    - calculate delta compared to current values
+    - send delta to db
+    """
 
     # Try to read the config file with initial values.
     start_from = datetime.min
@@ -251,11 +273,15 @@ def execute():
 
 
 def main():
-    # Loop forever and execute the core program with these settings:
-    # - Do not launch concurrent request
-    # - Wait (at least) 60 seconds between two requests
-    # - If a request takes longer than 60 seconds, start the following one
-    #   as soon as possible.
+    """Execute the main cycle in loop.
+
+    Loop forever and execute the core program with these settings:
+        - Do not launch concurrent request
+        - Wait (at least) 60 seconds between two requests
+        - If a request takes longer than 60 seconds, start the following one
+          as soon as possible.
+
+    """
     while True:
         begin = time.time()
         execute()

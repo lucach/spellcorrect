@@ -22,8 +22,11 @@ import requests
 
 
 class MediaWiki:
+    """Wrap MediaWiki API in a handy class.
 
+    """
     def __init__(self, base_URL):
+
         # Try to ease the interface fixing common URL mistakes.
         if not base_URL.endswith('w/api.php'):
             if not base_URL[-1] == '/':
@@ -32,7 +35,15 @@ class MediaWiki:
         self.base_URL = base_URL
 
     def getRecentChanges(self, start_from, last_id=0, namespace=0):
+        """Return a list of objects. Each of them represents a recent change.
 
+        start_from (datetime): minimum datetime for recent changes.
+        last_id (int): minimum ID of returned objects.
+        namespace (int): namespace ID where to retrieve recent change.
+
+        return (list): a list of objects, each represents a recent change.
+
+        """
         # Get from_time in the YYYYMMDDHHMMSS format, as required by MediaWiki.
         start_from_str = start_from.strftime('%Y%m%d%H%M%S')
 
@@ -51,6 +62,15 @@ class MediaWiki:
         return recentchanges
 
     def getPageReviews(self, revIDs):
+        """Return a list of objects. Each of them represents a page at a
+        specific revision.
+
+        revIDs (list): a list of revision identifiers.
+
+        return (list|None): a list of pages, one for supplied revision ID or
+            None if the original list was empty.
+
+        """
         # Return None for an empty list.
         if not revIDs:
             return None
@@ -59,6 +79,7 @@ class MediaWiki:
         revIDs_string = ""
         for ID in revIDs:
             revIDs_string += str(ID) + "|"
+
         # Remove the trailing pipe.
         revIDs_string = revIDs_string[:-1]
 
@@ -76,6 +97,7 @@ class MediaWiki:
                                  'pageid': page['pageid'],
                                  'title': page['title']
                                  })
+
         # Silently ignore any kind of error (e.g., deleted page which do not
         # have attributes we'd like to retrieve)
         except KeyError:

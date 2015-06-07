@@ -3,3 +3,4 @@ test/
 appengine/config.yaml
 updateWikiData.conf
 .vimrc
+__pycache__/

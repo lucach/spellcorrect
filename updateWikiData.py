@@ -18,13 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import codecs
-import html
 import json
 import logging
 import os
 import random
 import redis
-import requests
 import string
 import tempfile
 import time
@@ -33,72 +31,12 @@ from collections import Counter
 from datetime import datetime
 from subprocess import call
 
+from MediaWiki import MediaWiki
+
 REDIS_UNIGRAMS_DB = 0
 REDIS_BIGRAMS_DB = 1
 URL = 'http://it.wikipedia.org/'
 logger = logging.getLogger()
-
-
-class MediaWiki:
-
-    def __init__(self, base_URL):
-        # Try to ease the interface fixing common URL mistakes.
-        if not base_URL.endswith('w/api.php'):
-            if not base_URL[-1] == '/':
-                base_URL += '/'
-            base_URL += 'w/api.php'
-        self.base_URL = base_URL
-
-    def getRecentChanges(self, start_from, last_id=0, namespace=0):
-
-        # Get from_time in the YYYYMMDDHHMMSS format, as required by MediaWiki.
-        start_from_str = start_from.strftime('%Y%m%d%H%M%S')
-
-        parameters = {'action': 'query',
-                      'format': 'json',
-                      'list': 'recentchanges',
-                      'continue': '',
-                      'rcnamespace': namespace,
-                      'rcstart': start_from_str,
-                      'rcdir': 'newer',
-                      'rclimit': 500,  # maximum
-                      'rcprop': 'ids|timestamp'}
-        r = requests.get(self.base_URL, params=parameters).json()
-        recentchanges = r['query']['recentchanges']
-        recentchanges = [rc for rc in recentchanges if rc['rcid'] > last_id]
-        return recentchanges
-
-    def getPageReviews(self, revIDs):
-        # Return None for an empty list.
-        if not revIDs:
-            return None
-
-        # Build a string in the form ID-1|ID-2|...|ID-N.
-        revIDs_string = ""
-        for ID in revIDs:
-            revIDs_string += str(ID) + "|"
-        # Remove the trailing pipe.
-        revIDs_string = revIDs_string[:-1]
-
-        parameters = {'action': 'query',
-                      'format': 'json',
-                      'prop': 'revisions',
-                      'rvprop': 'content',
-                      'revids': revIDs_string}
-        r = requests.get(self.base_URL, params=parameters).json()
-        response = []
-        page = next(iter(r['query']['pages'].values()))
-        try:
-            for revision in page['revisions']:
-                response.append({'content': html.escape(revision['*']),
-                                 'pageid': page['pageid'],
-                                 'title': page['title']
-                                 })
-        # Silently ignore any kind of error (e.g., deleted page which do not
-        # have attributes we'd like to retrieve)
-        except KeyError:
-            pass
-        return response
 
 
 def update_redis_key(redis, key, delta):

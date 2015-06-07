@@ -21,11 +21,15 @@ import argparse
 import codecs
 import sys
 
+"""Script to get a list of words from unigrams frequencies.
+
+"""
+
 
 def main():
 
     parser = argparse.ArgumentParser(
-        description="Script to get pure words from unigrams frequencies.")
+        description="Script to get a list of words from unigrams frequencies.")
     parser.add_argument("-f", "--file", help="source file to be processed",
                         required=True)
     parser.add_argument("-o", "--output", help="output file with results",

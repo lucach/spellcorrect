@@ -23,6 +23,10 @@ import logging
 import redis
 import sys
 
+"""Script to send frequencies to a redis database.
+
+"""
+
 
 def main():
 
@@ -61,6 +65,7 @@ def main():
     r = redis.StrictRedis(host=args.host, port=args.port, db=args.db,
                           password=args.password)
 
+    # Process the file.
     linecounter = 0
     with codecs.open(args.file, 'r', 'utf8') as f:
         pipe = r.pipeline()

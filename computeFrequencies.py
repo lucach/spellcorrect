@@ -36,8 +36,20 @@ exclude = set(u'"!(),.:;?[]{}“”«»')
 
 
 class Worker(multiprocessing.Process):
+    """Class that represents a process.
+
+    """
 
     def __init__(self, queue, results_queue, type):
+        """Initialize the process with information it requires.
+
+        queue (multiprocessing.JoinableQueue): the queue containing the work,
+            each element is a line to be processed.
+        results_queue (multiprocessing.Queue): the queue that will contain the
+            results, each element is a Counter (collections.Counter).
+        type (string): whether to compute 'unigrams' or 'bigrams' frequencies.
+
+        """
         multiprocessing.Process.__init__(self)
         self._queue = queue
         self._results_queue = results_queue
@@ -53,6 +65,13 @@ class Worker(multiprocessing.Process):
             raise Exception("Internal error.")
 
     def _processUnigrams(self, line):
+        """Process a line and increment Counter for each word found.
+
+        Note: words longer than 50 chars are ignored.
+
+        line (string): the line to be processed.
+
+        """
         for word in line.split():
             word = ''.join(c for c in word if c not in exclude)
             search = re.compile(r'[^0-9 -/]').search
@@ -62,6 +81,16 @@ class Worker(multiprocessing.Process):
                 self._count[word] += 1
 
     def _processBigrams(self, line):
+        """Process a line and increment Counter for each pair of word found.
+
+        It is important to define what "a pair of word" is. To simplify, we
+        refer to its meaning as "two words separated by a space".
+
+        Note: words longer than 50 chars are ignored.
+
+        line (string): the line to be processed.
+
+        """
         words = line.split()
         for word_idx in range(len(words) - 1):
             pair = [words[word_idx], words[word_idx + 1]]
@@ -77,6 +106,10 @@ class Worker(multiprocessing.Process):
                 self._count[" ".join(pair)] += 1
 
     def run(self):
+        """Loop until there are (in queue) new jobs to be executed.
+        At the end, put the results Counter in the appropriate queue.
+
+        """
         while True:
             line = None
             try:
@@ -94,7 +127,15 @@ class Worker(multiprocessing.Process):
 
 
 def main():
+    """Launch the script that computes frequencies.
 
+    - Read the file (or all files within a directory) and put each line in
+      queue
+    - Spawn multiple processes (Worker)
+    - Collect results from processes, merge them and write the results in a
+      file.
+
+    """
     parser = argparse.ArgumentParser(
         description="Script to compute unigrams and/or bigrams frequencies.")
     parser.add_argument("-f", "--file", help="source file to be processed")
@@ -198,6 +239,7 @@ def main():
         # Write the header.
         out.write("%d %d\n" % (len(counter.values()), sum(counter.values())))
 
+        # For each element, write the key and its value (space separated).
         for k, v in counter.most_common():
             out.write("%s %d\n" % (k, v))
 

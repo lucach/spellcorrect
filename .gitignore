@@ -4,3 +4,36 @@ appengine/config.yaml
 updateWikiData.conf
 .vimrc
 __pycache__/
+*~
+
+# VIM swap
+*.swp
+
+## TEX related
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+
+## Bibliography auxiliary files (bibtex/biblatex/biber):
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.brf
+*.run.xml
+
+## Build tool auxiliary files:
+*.fdb_latexmk
+*.synctex
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+# listings
+*.lol
+

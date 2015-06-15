@@ -1,0 +1,76 @@
+\chapter{Prima di mettersi all'opera}
+\label{cap_teoria}
+Si supponga che l'obiettivo sia correggere \emph{amre}, una parola palesemente sbagliata perché non contenuta in nessun dizionario della lingua italiana. È evidente come sia impossibile stabilire con certezza quale debba essere la miglior soluzione al quesito: per esempio, \emph{amre} dovrebbe essere corretta in \emph{amore} oppure in \emph{amare}, oppure ancora in \emph{mare}? Questo semplice esempio suggerisce come la correzione ortografica si debba basare sulle probabilità. 
+
+\section{Teoria della probabilità}
+
+Nel corso degli anni è stato sviluppato un modello probabilistico il cui fine è cercare la parola intesa dall'utente dato un input in cui vi è un'alterazione di qualche tipo. Il modello prende il nome di ``noisy channel'' \cite{noisychannel}.
+
+Il nostro compito è quello quindi di trovare una parola $w$, quella che originariamente l'utente intendeva, che sostituisca la parola errata nel miglior modo possibile. Ciò significa che si è alla ricerca di una correzione $c$ all'interno di un dizionario $D$ tale che venga massimizzata la probabilità che la parola $c$ sia esattamente quella che l'utente voleva ($w$).
+
+\begin{equation}
+\argmax_{c \in D} P(c|w)
+\end{equation}
+
+Per il teorema di Bayes, ciò equivale a:
+
+\begin{equation}
+\label{bayes}
+\argmax_{c \in D} \frac{P(w|c)\cdot P(c)}{P(w)}
+\end{equation}
+
+Possiamo ulteriormente semplificare l'equazione osservando che il denominatore $P(w)$ dipende esclusivamente dalla parola originale e quindi sarà costante indipendentemente dall'ipotesi di correzione. Prese due correzioni $c_1$ e $c_2$ distinte tra loro, ciò che massimizza l'equazione \eqref{bayes} massimizza sicuramente anche \eqref{bayes_simple}, essendo $P(w)$ costante.
+
+\begin{equation}
+\label{bayes_simple}
+\argmax_{c \in D} \, \, \underbrace{P(w|c)}_{error} \, \, \cdot \underbrace{P(c)}_{language}
+\end{equation}
+
+Il risultato mostra quindi come la probabilità che $c$ sia la miglior correzione è data dal prodotto tra due fattori: $P(w|c)$ e $P(c)$. 
+Il primo viene chiamato ``error model'' e ci dice quanto probabile è che $c$ sia la parola che si intendeva rispetto a $w$.
+Il secondo invece viene detto ``language model'' e ci dice quanto probabile è che $c$ sia una parola, all'interno del dizionario $D$ che contiene tutti i candidati.
+
+\section{Probabilità basata sul contesto}
+\label{probabilita}
+
+In non poche situazioni fare una scelta basata solo su una singola parola può portare a una valutazione errata. Si consideri ad esempio la frase: \emph{Nel mare si nuota}. Riprendendo l'esempio fatto a inizio capitolo, supponiamo che la parola \emph{mare} sia stata erroneamente digitata come \emph{amre}. L'algoritmo di correzione potrebbe riportare come parole nel dizionario $D$, tra le altre, \emph{amore} (con una 'o' mancante) e \emph{mare} (con 'm' e 'a' invertite). Seguendo l'algoritmo mostrato nel paragrafo precedente è possibile che venga riportata come soluzione \emph{amore}, che compare spesso nella lingua italiana, ma che nella frase \emph{Nel amore si nuota} è evidentemente fuori posto.
+
+Per risolvere questo genere di problemi estendiamo il ``language model'' in modo che consideri anche ciò che viene prima e dopo la parola che stiamo analizzando. Nel caso di esempio possiamo affermare con sicurezza che $P(Nel\,|\, mare) > P(Nel\,|\,amore)$ (visto che \emph{nel mare} è una sequenza di parole corretta, mentre \emph{nel amore} non lo è).
+
+Per evitare un appesantimento eccessivo dell'algoritmo, in questo progetto ci limiteremo a considerare, data una possibile correzione $c$, la parola precedente ($w_{i-1}$) e quella seguente ($w_{i+1}$).
+Sequenze di due parole sono detti bigrammi, in contrapposizione alle singole parole (unigrammi). Generalizzando, una sequenza di $N$ parole viene definita $N$-gramma.
+
+Analizziamo la sottoparte della formula che dovrebbe considerare $c$ (in sostituzione di $w_{i}$) e $w_{i-1}$. Applicando la teoria della probabilità condizionata si ha che:
+\begin{equation}
+P(w_{i-1}, c) = P(c | w_{i-1}) \cdot P(w_{i-1})
+\end{equation}
+
+Per la ``regola della catena'' (nota anche come teorema della probabilità composta) si ha che:
+\begin{equation}
+P(w_1, w_2, \ldots, w_n) =  P(w_1|w_2, \ldots, w_n) \cdot \ldots \cdot P(w_{n-1}|w_n) \cdot P(w_n)
+\end{equation}
+
+Se consideriamo i bigrammi, concludiamo che la probabilità di una sequenza è semplicemente il prodotto delle probabilità condizionate dei suoi bigrammi.
+
+Recuperando l'equazione \eqref{bayes_simple} e adattandola per essere usata con i bigrammi si ottiene la seguente formula (implementata nell'algoritmo di correzione):
+
+\begin{equation}
+\label{prob_finale}
+\argmax_{c \in D} \, \, \underbrace{P(w|c)}_\text{error} \, \cdot \, \underbrace{P(w_{i-1}|c) \cdot P(c) \cdot P(c|w_{i+1}}_{language})
+\end{equation}
+
+\section{Scelta del dataset}
+
+Come abbiamo visto nei paragrafi precedenti, la probabilità gioca un ruolo essenziale nell'algoritmo di correzione. Diventa quindi cruciale stabilire dove prendere una grande mole di dati su cui calcolare probabilità significative. Per la legge dei grandi numeri si avranno migliori risultati tanto più l'insieme dei dati sarà ampio. 
+
+Google, che fa un ampio uso di $N$-grammi (sono celebri l'autocorrezione del motore di ricerca e il traduttore automatico), ha rilasciato pubblicamente un insieme di dati raccolti dai suoi crawler che scandagliano quotidianamente la rete\footnote{\url{https://catalog.ldc.upenn.edu/LDC2006T13}}. Questi dati sono però purtroppo relativi solo alla lingua inglese (dove sono presenti oltre un miliardo di occorrenze). Google rilascia anche un database estratto da Google Books, questa volta anche in lingua italiana: purtroppo però le osservazioni sono minori e viene aggiornato con poca frequenza\footnote{\url{http://storage.googleapis.com/books/ngrams/books/datasetsv2.html}}.
+
+Costruire un proprio crawler che scandagli il web e memorizzi tutte le informazioni può essere un'attività tecnicamente interessante ma poco realizzabile nella pratica. Si può invece pensare di sfruttare Wikipedia in lingua italiana. Essa contiene un'enorme quantità di pagine (all'atto della stesura di questo testo se ne contano circa 1,2 milioni), scritte perlopiù da umani e in continuo aggiornamento.
+
+\section{Error model}
+\label{distanzadameraulev}
+L'uso di Wikipedia, che abbiamo scoperto essere conveniente allo scopo, risolve in realtà solo parte del problema. Attraverso l'analisi del testo possiamo calcolare le probabilità degli unigrammi e dei bigrammi, che costituiscono il ``language model''. 
+
+Finora non è stato affrontato l'``error model'', ovvero la probabilità che una parola $w$ sia diventata un errore $x$ per un certo motivo. Calcolare sperimentalmente questa probabilità è difficile, perché servirebbe un corpus di parole errate con la loro correzione. Ve ne sono diversi, anche di buona qualità, per la lingua inglese mentre mancano per la lingua italiana. 
+
+Per questi motivi adotteremo un semplice modello: la distanza Damerau–Levenshtein \cite{damerau,levenshtein}. Essa rappresenta il numero di modifiche per passare da una stringa $a$ a una stringa $b$. Si considera una modifica un'eliminazione (rimuovere una lettera), un'inserzione (aggiungere una lettera), un'alterazione (cambiare una lettera in un'altra) e una trasposizione (scambiare due lettere adiacenti).

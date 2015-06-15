@@ -1,0 +1,28 @@
+\chapter{Risultati}
+Valutare quanto un correttore ortografico automatico sia buono non è facile. La maggior parte della letteratura su questo tema esegue dei test partendo da un elenco noto di errori ortografici e della loro esatta correzione, valutando quindi la percentuale di casi in cui il sistema ha dato l'esito atteso.
+
+È però quasi impossibile fare una simile operazione con il nostro correttore in lingua italiana, banalmente perché non esiste un insieme di dati di questo tipo disponibile. Sarebbe possibile crearlo da zero, ma si rischierebbe un forte effetto di bias\footnote{\url{http://it.wikipedia.org/wiki/Bias_induttivo}}: i dati rischierebbero di essere costruiti appositamente per questo algoritmo di correzione. Di fatto verrebbe quindi valutata una correttezza specifica ma molto poco generica, rendendo così il risultato privo di interesse statistico.
+
+\section{Si può fare di meglio?}
+Alcuni aspetti del progetto possono essere estesi e migliorati:
+\begin{itemize}
+\item Tutti i programmi per l'elaborazione del codice supportano completamente la codifica UTF-8 dello standard Unicode, tuttavia lo stesso non si può dire per l'algoritmo di correzione in sè. Esso infatti, per ridurre il numero possibile di candidati alla correzione, considera solo caratteri minuscoli dell'alfabeto latino. Almeno il supporto alle lettere maiuscole e alle lettere accentate dovrebbe essere offerto. Dustin Boswell, in una sua ricerca del 2004 \cite{GeneratingCandidates}, esplora alcune strutture dati avanzate che sembrano essere promettenti per questo impiego.
+
+\item L'algoritmo per la divisione del testo in parole utilizzato è banale: il carattere spazio ha la funzione di separatore. Questo non è evidentemente sempre vero anche considerando solo la lingua italiana: due parole potrebbero essere separate anche da un apostrofo. Questo problema è noto in letteratura come ``Word segmentation'' ed è un incubo se si considera, ad esempio, la lingua cinese dove alcune nostre frasi sono rappresentate con sequenze di una manciata di caratteri senza spazio. 
+
+La divisione in parole resta comunque un problema anche considerando solo la lingua italiana: si prendano come esempio i due spezzoni di frase ``insufficienti modi'' e ``in sufficienti modi''. Un errore ortografico potrebbe essere anche il mancato inserimento dello spazio (o viceversa la sua aggiunta involontaria). Già questo piccolo esempio mostra come la divisione in parole sia a sua volta un sottoproblema estremamente vasto e risolto, ancora una volta, in modo statistico.
+
+\item In un mondo globalizzato è oggi difficile pensare di realizzare un programma che funzioni solo in una sua piccola parte. Eppure per alcuni compiti piuttosto specifici è ancora necessario ragionare per area geografica. Uno di questi è sicuramente quello della correzione ortografica, il che lascia spesso delusi gli utenti, desiderosi di una soluzione universale. I risultati più promettenti in questo campo sembrano arrivare dai laboratori IBM \cite{languageindependent}.
+
+\end{itemize}
+
+\section{Pubblicazione del lavoro}
+\label{pubb}
+L'intera piattaforma di correzione, che comprende tutti i programmi Python che compongono i vari passaggi, è stata pubblicata su un repository di GitHub nel profilo dell'autore\footnote{\url{https://github.com/lucach/spellcorrect}} sotto licenza AGPL. L'impiego del sistema di controllo versione Git sin dalle prime fasi della programmazione ha consentito uno sviluppo particolarmente efficace, grazie alle funzionalità di branch e di revert delle ultime modifiche.
+
+Gli indirizzi di riferimento a cui trovare l'applicazione sono:
+
+\begin{itemize}
+\item Sito web per utenti finali: \url{http://spellcorrect.chiodini.org}
+\item API: \url{http://api.spellcorrect.chiodini.org}
+\end{itemize}

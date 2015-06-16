@@ -200,7 +200,7 @@ class Corrector(flask_restful.Resource):
         if res is None:
             res = self.parse(words_str)
             res['cache'] = False
-            memcache.add(words_str, res, 3600)
+            memcache.add(words_str, res, 86400)
         else:
             res['cache'] = True
 

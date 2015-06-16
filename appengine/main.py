@@ -204,7 +204,6 @@ class Corrector(flask_restful.Resource):
         else:
             res['cache'] = True
 
-        res['init_time'] = init_time.isoformat()
         res['queries'] = queries
         res['elapsed_time'] = str(datetime.datetime.now() - begin_time)
         return res

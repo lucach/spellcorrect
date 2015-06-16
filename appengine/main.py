@@ -34,6 +34,7 @@ from google.appengine.api import memcache
 
 
 app = Flask(__name__)
+app._static_folder = '.' 
 api = flask_restful.Api(app)
 # Enable CORS.
 api.decorators = [cors.crossdomain(origin='*')]
@@ -163,6 +164,10 @@ def correct(word_prev, word, word_next):
     return max(extended_candidates, key=lambda c: c[4])
 
 
+class Index(flask_restful.Resource):
+    def get(self):
+        return app.send_static_file('index.html')
+
 class Corrector(flask_restful.Resource):
     def parse(self, words_str):
         words = words_str.split()
@@ -205,6 +210,7 @@ class Corrector(flask_restful.Resource):
         return res
 
 api.add_resource(Corrector, '/correct/<words_str>')
+api.add_resource(Index, '/')
 
 if __name__ == '__main__':
     app.run(debug=True)

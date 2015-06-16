@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A layout example that shows off a responsive product landing page.">
+
+    <title>IT Spelling corrector</title>
+
+    
+
+
+<link type="text/css" rel="stylesheet" href="assets/pure/pure-min.css">
+
+
+
+<!--[if lte IE 8]>
+  
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-old-ie-min.css">
+  
+<![endif]-->
+<!--[if gt IE 8]><!-->
+  
+    <link type="text/css" rel="stylesheet" href="assets/pure/grids-responsive-min.css">
+  
+<!--<![endif]-->
+
+
+
+<link type="text/css" rel="stylesheet" href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
+
+
+
+  
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="css/layouts/marketing-old-ie.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link type="text/css" rel="stylesheet" href="assets/pure/layouts/marketing.css">
+    <!--<![endif]-->
+
+	<style type="text/css">
+	button.pure-button-primary {
+		background: white;
+		color: #1f8dd6;
+		border-radius: 5px;
+	}
+	
+	.hidden {
+		display:none;
+	}
+	
+	.spinner {
+	  width: 40px;
+	  height: 40px;
+
+	  position: relative;
+	  margin: auto;
+	}
+
+	.double-bounce1, .double-bounce2 {
+	  width: 100%;
+	  height: 100%;
+	  border-radius: 50%;
+	  background-color: #222685;
+	  opacity: 0.6;
+	  position: absolute;
+	  top: 0;
+	  left: 0;
+	  
+	  -webkit-animation: bounce 2.0s infinite ease-in-out;
+	  animation: bounce 2.0s infinite ease-in-out;
+	}
+
+	.double-bounce2 {
+	  -webkit-animation-delay: -1.0s;
+	  animation-delay: -1.0s;
+	}
+
+	@-webkit-keyframes bounce {
+	  0%, 100% { -webkit-transform: scale(0.0) }
+	  50% { -webkit-transform: scale(1.0) }
+	}
+
+	@keyframes bounce {
+	  0%, 100% { 
+		transform: scale(0.0);
+		-webkit-transform: scale(0.0);
+	  } 50% { 
+		transform: scale(1.0);
+		-webkit-transform: scale(1.0);
+	  }
+	}
+
+    .cd-modal-action {
+        margin-bottom: 10%
+    }
+
+    .cd-section {
+        text-transform: none;
+    }
+
+    #details-toggle {
+        color: white;
+    }
+	</style>
+
+	<script type="text/javascript" src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+	<script type="text/javascript">
+        var queries = 0;
+        function count()
+        {
+            if ($("#counter-div").html() == "0")
+            {
+                var options = {
+                      useEasing : true, 
+                      useGrouping : true, 
+                      separator : '.', 
+                      decimal : ',', 
+                      prefix : '', 
+                      suffix : '' 
+                    };
+                var counter = new CountUp("counter-div", 0, queries, 0, 2.5, options);
+                counter.start();
+            }
+        }
+		$(function(){
+			$("#correct-btn").click(
+				function ()
+				{
+                    if ($("#input-text").val() != "")
+    				{
+                    	$("#correct-btn").addClass("hidden");
+    					$("#spinner").removeClass("hidden");
+                        var query = $("#input-text").val();
+    					$.ajax({
+    						url: "http://api.spellcorrect.chiodini.org/correct/" +
+                                query,
+    						method: "GET",
+    					}).done(function(response) {
+    						$("#spinner").addClass("hidden");
+    						$("#correct-btn").removeClass("hidden");
+                            $("#btn-results").slideDown();
+                            $("#input-text").val("");
+                            var html = "<p> Hai inserito: <b>" + query + 
+                                       "</b></p>";
+                            if (query == response.corrected)
+                                html += "<p><i>Ottimo! Ciò che hai inserito " +
+                                        "sembra corretto!</i></p>";
+                            else
+                                html += "<p><i>Forse intendevi:</i> <b>" + 
+                                        response.corrected + "</b></p>";
+                            html += "<br><br><details onclick='count();'><summary id=\"details-toggle\">Maggiori dettagli</summary><p>Lo sapevi? Per risolvere questo problema sono state fatte <span class=\"jumbo\" id=\"counter-div\">0</span> interrogazioni al database </p></details>";
+                            queries = response.queries;
+                            $("#results-text").html(html);
+                        });
+                    }
+				}
+			);
+		});
+	</script>
+
+    <link rel="stylesheet" href="assets/css/modal.css">
+    <script src="assets/js/modal/velocity.min.js"></script>
+    <script src="assets/js/modal/main.js"></script>
+    <script src="assets/js/countUp.min.js"></script>
+
+</head>
+<body>
+
+<div class="header">
+    <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
+        <a class="pure-menu-heading" href="">Italian spelling corrector</a>
+
+        <!--<ul class="pure-menu-list">
+            <li class="pure-menu-item pure-menu-selected"><a href="#" class="pure-menu-link">Home</a></li>
+            <li class="pure-menu-item"><a href="#" class="pure-menu-link">Tour</a></li>
+            <li class="pure-menu-item"><a href="#" class="pure-menu-link">Sign Up</a></li>
+        </ul>-->
+    </div>
+</div>
+
+<div class="splash-container">
+    <div class="splash">
+
+        <section id="btn-results" class="cd-section" style="display:none">
+            <div class="cd-modal-action">
+                <a id="modal-load" href="#0" class="btn" data-type="modal-trigger">Scopri il risultato</a>
+                <span class="cd-modal-bg"></span>
+            </div>
+         
+            <div class="cd-modal">
+                <div id="results-text" class="cd-modal-content">
+                </div>
+            </div>
+         
+            <a href="#0" class="cd-modal-close">Close</a>
+            <p> oppure </p>
+        </section>
+		<p class="splash-subhead">
+            Inserisci una parola o una frase:
+        </p>
+		<h1><input id="input-text" type="text" class="is-center"></h1>
+        <p>
+            <button id="correct-btn" class="pure-button pure-button-primary">ANALIZZA</button>
+			<div id="spinner" class="spinner hidden">
+			  <div class="double-bounce1"></div>
+			  <div class="double-bounce2"></div>
+			</div>
+        </p>
+    </div>
+</div>
+
+<div class="content-wrapper">
+    <div class="content">
+        <h2 class="content-head is-center">Scopri come funziona</h2>
+
+        <div class="pure-g">
+            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
+
+                <h3 class="content-subhead">
+                    <i class="fa fa-rocket"></i>
+                    Get Started Quickly
+                </h3>
+                <p>
+                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
+                </p>
+            </div>
+            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
+                <h3 class="content-subhead">
+                    <i class="fa fa-mobile"></i>
+                    Responsive Layouts
+                </h3>
+                <p>
+                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
+                </p>
+            </div>
+            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
+                <h3 class="content-subhead">
+                    <i class="fa fa-th-large"></i>
+                    Modular
+                </h3>
+                <p>
+                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
+                </p>
+            </div>
+            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
+                <h3 class="content-subhead">
+                    <i class="fa fa-check-square-o"></i>
+                    Plays Nice
+                </h3>
+                <p>
+                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="ribbon l-box-lrg pure-g">
+        <div class="l-box-lrg is-center pure-u-1 pure-u-md-1-2 pure-u-lg-2-5">
+            <img class="pure-img-responsive" alt="File Icons" width="300" src="assets/img/common/file-icons.png">
+        </div>
+        <div class="pure-u-1 pure-u-md-1-2 pure-u-lg-3-5">
+
+            <h2 class="content-head content-head-ribbon">Laboris nisi ut aliquip.</h2>
+
+            <p>
+                Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+                consequat. Duis aute irure dolor.
+            </p>
+        </div>
+    </div>
+
+    <div class="content">
+        <h2 class="content-head is-center">Dolore magna aliqua. Uis aute irure.</h2>
+
+        <div class="pure-g">
+            <div class="l-box-lrg pure-u-1 pure-u-md-2-5">
+                <form class="pure-form pure-form-stacked">
+                    <fieldset>
+
+                        <label for="name">Your Name</label>
+                        <input id="name" type="text" placeholder="Your Name">
+
+
+                        <label for="email">Your Email</label>
+                        <input id="email" type="email" placeholder="Your Email">
+
+                        <label for="password">Your Password</label>
+                        <input id="password" type="password" placeholder="Your Password">
+
+                        <button type="submit" class="pure-button">Sign Up</button>
+                    </fieldset>
+                </form>
+            </div>
+
+            <div class="l-box-lrg pure-u-1 pure-u-md-3-5">
+                <h4>Contact Us</h4>
+                <p>
+                    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+                    tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                    quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+                    consequat.
+                </p>
+
+                <h4>More Information</h4>
+                <p>
+                    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+                    tempor incididunt ut labore et dolore magna aliqua.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer l-box is-center">
+        Luca Chiodini, 2015. <a href="github.com/lucach/spellcorrect">Source code</a>.
+    </div>
+
+</div>
+
+
+
+</body>
+</html>

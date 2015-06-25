@@ -108,19 +108,23 @@
         position: fixed;
         bottom: 0;
         width: 100%;
-        height: 6%;
+        height: 8%;
         color: white;
     }
 
     .splash-container {
-        height: 94%;
+        height: 92%;
+    }
+
+    #input-text {
+        width: 100%;
     }
 
 	</style>
 
 	<script type="text/javascript" src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
 	<script type="text/javascript">
-        var queries = 0;
+        var tot_queries = 0;
         function count()
         {
             if ($("#counter-div").html() == "0")
@@ -133,7 +137,7 @@
                       prefix : '', 
                       suffix : '' 
                     };
-                var counter = new CountUp("counter-div", 0, queries, 0, 2.5, options);
+                var counter = new CountUp("counter-div", 0, tot_queries, 0, 2.5, options);
                 counter.start();
             }
         }
@@ -164,12 +168,23 @@
                                 html += "<p><i>Forse intendevi:</i> <b>" + 
                                         response.corrected + "</b></p>";
                             html += "<br><br><details onclick='count();'><summary id=\"details-toggle\">Maggiori dettagli</summary><p>Lo sapevi? Per risolvere questo problema sono state fatte <span class=\"jumbo\" id=\"counter-div\">0</span> interrogazioni al database </p></details>";
-                            queries = response.queries;
+                            tot_queries = response.queries;
                             $("#results-text").html(html);
                         });
                     }
 				}
 			);
+
+            $(document).bind('keypress', function(e) {
+                var code = e.keyCode || e.which;
+                if (code == 49) // 1
+                    $('#input-text').typetype('prvisioni mteoa', {e: 0, t: 75});
+                else if (code == 50) // 2
+                    $('#input-text').typetype('l\'amre è cieco', {e: 0, t: 75});
+                else if (code == 51) // 3
+                    $('#input-text').typetype('nuotano nel amre', {e: 0, t: 75});
+            });
+
 		});
 	</script>
 
@@ -177,6 +192,7 @@
     <script src="assets/js/modal/velocity.min.js"></script>
     <script src="assets/js/modal/main.js"></script>
     <script src="assets/js/countUp.min.js"></script>
+    <script src="assets/js/jquery.typetype.min.js"></script>
 
 </head>
 <body>
@@ -213,7 +229,7 @@
 		<p class="splash-subhead">
             Inserisci una parola o una frase:
         </p>
-		<h1><input id="input-text" type="text" class="is-center"></h1>
+		<h1><input id="input-text" type="text" class="is-center" spellcheck="false"></h1>
         <p>
             <button id="correct-btn" class="pure-button pure-button-primary">ANALIZZA</button>
 			<div id="spinner" class="spinner hidden">

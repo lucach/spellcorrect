@@ -200,11 +200,11 @@ class Corrector(flask_restful.Resource):
         if res is None:
             res = self.parse(words_str)
             res['cache'] = False
+            res['queries'] = queries
             memcache.add(words_str, res, 86400)
         else:
             res['cache'] = True
 
-        res['queries'] = queries
         res['elapsed_time'] = str(datetime.datetime.now() - begin_time)
         return res
 

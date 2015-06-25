@@ -3,7 +3,7 @@
 "Spell corrector" is a system designed to correct misspellings in Italian language. Statistical data are retrieved from the italian version of Wikipedia.
 
 ## Report
-To read the story behind this project and to understand why it works, you should read [this](https://raw.githubusercontent.com/lucach/spellcorrect/master/thesis/main.pdf) (in Italian).
+To read the story behind this project and to understand why it works, you should read [this](https://files.chiodini.org/Tesina_Correzione_ortografica.pdf) (in Italian).
 
 ## Usage
 
